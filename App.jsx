@@ -1,6 +1,7 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   FlatList,
   Image,
@@ -47,9 +48,6 @@ const App = () => {
   const [flag, setFlag] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [history, setHistory] = useState([]);
-
-  let width = Dimensions.get('window').width;
-  let height = Dimensions.get('window').height;
 
   const createTables = () => {
     db.transaction(txn => {
@@ -199,28 +197,38 @@ const App = () => {
   };
 
   const getWeather = async (lat, lon, city, country) => {
-    const weather = await fetch(
-      `http://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`,
-    );
-    const data = await weather.json();
-    setDataList(data?.list);
-    let temp = data?.list[0].main?.temp;
-    let main = data?.list[0].weather[0]?.main;
-    let description = data?.list[0].weather[0]?.description;
-    let icon = data?.list[0].weather[0]?.icon;
-    let date = data?.list[0].dt_txt.split(' ')[0];
-    let time = data?.list[0].dt_txt.split(' ')[1];
-    time = time.substr(0, time.length - 3);
-    let itemWeekDay = getWeekDay(date);
-    setWeatherTemp(temp);
-    setWeatherMain(main);
-    setWeatherDescription(description);
-    setIcon(icon);
-    setDate(date);
-    setTime(time);
-    setDay(itemWeekDay);
-    addHistory(city, country, temp, main, date, time);
-    console.log('City=', city, 'lat=', lat, 'lon=', lon);
+    try {
+      const weather = await fetch(
+        `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`,
+      );
+      const data = await weather.json();
+
+      if (data.cod !== '200') {
+        setIsLoading(false);
+        alert('ERROR cod=' + data.cod + ' message=' + data.message);
+      }
+
+      setDataList(data?.list);
+      let temp = data?.list[0].main?.temp;
+      let main = data?.list[0].weather[0]?.main;
+      let description = data?.list[0].weather[0]?.description;
+      let icon = data?.list[0].weather[0]?.icon;
+      let date = data?.list[0].dt_txt.split(' ')[0];
+      let time = data?.list[0].dt_txt.split(' ')[1];
+      time = time.substr(0, time.length - 3);
+      let itemWeekDay = getWeekDay(date);
+      setWeatherTemp(temp);
+      setWeatherMain(main);
+      setWeatherDescription(description);
+      setIcon(icon);
+      setDate(date);
+      setTime(time);
+      setDay(itemWeekDay);
+      addHistory(city, country, temp, main, date, time);
+      console.log('City=', city, 'lat=', lat, 'lon=', lon);
+    } catch (err) {
+      alert(err);
+    }
   };
 
   const getForecastWeather = (temp, main, date, time, description, icon) => {
@@ -248,7 +256,6 @@ const App = () => {
         },
       );
       if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-        console.log('You can use the location');
         Geolocation.getCurrentPosition(position => {
           setLat(Number(position.coords.latitude));
           setLon(Number(position.coords.longitude));
